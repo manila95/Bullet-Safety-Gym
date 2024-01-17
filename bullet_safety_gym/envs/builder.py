@@ -119,7 +119,7 @@ class EnvironmentBuilder(gym.Env):
         a_lim = np.ones((act_dim,), dtype=np.float32)
         self.observation_space = gym.spaces.Box(-o_lim, o_lim, dtype=np.float32)
         self.action_space = gym.spaces.Box(-a_lim, a_lim, dtype=np.float32)
-
+        self.goal_met = 0
         # stepping information
         self.iteration = 0
 
@@ -333,17 +333,21 @@ class EnvironmentBuilder(gym.Env):
         info = self.task.calculate_cost()
         # update agent visuals when costs are received
         if info.get('cost', 0) > 0:
+            done = True
             self.agent.violates_constraints(True)
         else:
+            done = not self.agent.alive
             self.agent.violates_constraints(False)
-        done = not self.agent.alive
+        
         if self.task.goal_achieved:
             if self.task.continue_after_goal_achievement:
                 r += 5.0  # add sparse reward
                 self.task.update_goal()
+                self.goal_met += 1
             else:
                 done = True
         next_obs = self.get_observation()
+        info["goal_met"] = self.goal_met
         return next_obs, r, done, info
 
     def render(
